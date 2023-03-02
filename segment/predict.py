@@ -7,11 +7,12 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
 
-#..... Tracker modules......
+# ..... Tracker modules......
 import skimage
 from sort_count import *
 import numpy as np
-#...........................
+
+# ...........................
 
 
 FILE = Path(__file__).resolve()
@@ -23,7 +24,8 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
 from utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
-                           increment_path, non_max_suppression,scale_segments, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+                           increment_path, non_max_suppression, scale_segments, print_args, scale_coords,
+                           strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.segment.general import process_mask, scale_masks, masks2segments
 from utils.segment.plots import plot_masks
@@ -58,24 +60,23 @@ def run(
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
         dnn=False,  # use OpenCV DNN for ONNX inference
-        trk = False,
-):  
+        trk=False,
+):
+    # .... Initialize SORT ....
 
-    #.... Initialize SORT .... 
-        
-    sort_max_age = 5 
+    sort_max_age = 5
     sort_min_hits = 2
     sort_iou_thresh = 0.2
     sort_tracker = Sort(max_age=sort_max_age,
                         min_hits=sort_min_hits,
-                        iou_threshold=sort_iou_thresh) 
-    #......................... 
+                        iou_threshold=sort_iou_thresh)
+    # .........................
 
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-    webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
+    webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file) or (source == 'tello')
     if is_url and is_file:
         source = check_file(source)  # download
 
@@ -163,25 +164,25 @@ def run(
                 # Mask plotting ----------------------------------------------------------------------------------------
 
                 if trk:
-                    #Tracking ----------------------------------------------------
-                    dets_to_sort = np.empty((0,6))
-                    for x1,y1,x2,y2,conf,detclass in det[:, :6].cpu().detach().numpy():
-                        dets_to_sort = np.vstack((dets_to_sort, 
-                                        np.array([x1, y1, x2, y2, 
-                                                    conf, detclass])))
+                    # Tracking ----------------------------------------------------
+                    dets_to_sort = np.empty((0, 6))
+                    for x1, y1, x2, y2, conf, detclass in det[:, :6].cpu().detach().numpy():
+                        dets_to_sort = np.vstack((dets_to_sort,
+                                                  np.array([x1, y1, x2, y2,
+                                                            conf, detclass])))
 
                     tracked_dets = sort_tracker.update(dets_to_sort)
-                    tracks =sort_tracker.getTrackers()
+                    tracks = sort_tracker.getTrackers()
 
                     for track in tracks:
-                        annotator.draw_trk(line_thickness,track)
+                        annotator.draw_trk(line_thickness, track)
 
-                    if len(tracked_dets)>0:
-                        bbox_xyxy = tracked_dets[:,:4]
+                    if len(tracked_dets) > 0:
+                        bbox_xyxy = tracked_dets[:, :4]
                         identities = tracked_dets[:, 8]
                         categories = tracked_dets[:, 4]
                         annotator.draw_id(bbox_xyxy, identities, categories, names)
-            
+
                 # Write results
                 for j, (*xyxy, conf, cls) in enumerate(reversed(det[:, :6])):
                     if save_txt:  # Write to file

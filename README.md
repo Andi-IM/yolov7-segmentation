@@ -1,5 +1,15 @@
 # yolov7-instance-segmentation
 
+## Forked from [RizwanMunawar/yolov7-segmentation](https://github.com/RizwanMunawar/yolov7-segmentation)
+- To run prediction with Tello Support run it separately 
+```
+# This command used for activate drone control
+python3 segment/tello/control_tello.py
+```
+```
+python3 segment/predict.py --weights weights/river_segmentation.pt --source tello 
+```
+
 ## Coming Soon
 - Development of streamlit dashboard for Instance-Segmentation with Object Tracking
 

@@ -311,6 +311,10 @@ class LoadWebcam:  # for inference
 
 
 class LoadStreams:
+    # Video stream for TELLO, server socket
+    VS_UDP_IP = '0.0.0.0'
+    VS_UDP_PORT = 11111
+
     # YOLOv5 streamloader, i.e. `python detect.py --source 'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP streams`
     def __init__(self, sources='streams.txt', img_size=640, stride=32, auto=True, transforms=None):
         self.mode = 'stream'
@@ -334,6 +338,8 @@ class LoadStreams:
                 import pafy
                 s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
+            if s == 'tello':
+                s = self.get_udp_video_address()
             if s == 0:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
@@ -358,7 +364,15 @@ class LoadStreams:
         self.transforms = transforms  # optional
         if not self.rect:
             LOGGER.warning('WARNING: Stream shapes differ. For optimal performance supply similarly-shaped streams.')
-
+    
+    def get_udp_video_address(self) -> str:
+        """
+        Internal method, you normally wouldn't call this yourself.
+        """
+        address_schema = 'udp://@{ip}:{port}'  # + '?overrun_nonfatal=1&fifo_size=5000'
+        address = address_schema.format(ip=self.VS_UDP_IP, port=self.VS_UDP_PORT)
+        return address
+    
     def update(self, i, cap, stream):
         # Read stream `i` frames in daemon thread
         n, f, read = 0, self.frames[i], 1  # frame number, frame array, inference every 'read' frame
